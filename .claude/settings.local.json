@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(ruby --version)",
+      "PowerShell(gem --version)",
+      "PowerShell(winget --version)",
+      "PowerShell(choco --version)",
+      "PowerShell(scoop --version)",
+      "PowerShell(winget install RubyInstallerTeam.RubyWithDevKit.3.3 --accept-package-agreements --accept-source-agreements)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\); ruby --version)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\); gem install jekyll bundler)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\); Set-Location \"d:\\\\project\\\\blog\"; jekyll new . --force)",
+      "PowerShell(gh --version)",
+      "PowerShell(gh auth status)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\); gh --version; gh auth status)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\); Set-Location \"d:\\\\project\\\\blog\"; gh repo create taengkim.github.io --public --description \"My Jekyll blog\")",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\", \"User\"\\); Set-Location \"d:\\\\project\\\\blog\"; git init; git add .; git commit -m \"Initial Jekyll blog\"; git branch -M main; git remote add origin https://github.com/taengkim/taengkim.github.io.git; git push -u origin main)"
+    ]
+  }
+}
