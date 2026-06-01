@@ -1,6 +1,7 @@
 source "https://rubygems.org"
 
 gem "jekyll-theme-chirpy", "~> 7.2"
+gem "jekyll-feed", "~> 0.12"
 
 platforms :mingw, :x64_mingw, :mswin, :jruby do
   gem "tzinfo", ">= 1", "< 3"

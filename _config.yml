@@ -66,4 +66,9 @@ compress_html:
     envs: [development]
 
 plugins:
+  - jekyll-sitemap
   - jekyll-feed
+  - jekyll-archives
+  - jekyll-paginate
+  - jekyll-seo-tag
+  - jekyll-include-cache
