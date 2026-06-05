@@ -21,6 +21,7 @@ social:
 
 avatar: ""
 toc: true
+mermaid: true
 
 paginate: 10
 
