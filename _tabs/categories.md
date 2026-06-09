@@ -1,5 +1,6 @@
 ---
+layout: categories
 title: Categories
-icon: fas fa-stream
-order: 2
+icon: far fa-folder-open
+order: 1
 ---
