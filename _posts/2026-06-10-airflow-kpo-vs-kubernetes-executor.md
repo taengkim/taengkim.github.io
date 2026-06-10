@@ -5,7 +5,7 @@ categories: [Airflow, 운영]
 tags: [airflow, kubernetes, pod-operator, kubernetes-executor, 운영, 인프라]
 ---
 
-> **TL;DR** — `KubernetesExecutor`는 Airflow **실행 엔진** 계층이고, `KubernetesPodOperator`는 **오퍼레이터** 계층입니다. 서로 다른 계층이라 조합해서 쓸 수 있습니다. Airflow 3.x에서는 **멀티 익스큐터**가 공식 지원되어, DAG 안에서 태스크별로 CeleryExecutor와 KubernetesExecutor를 동시에 지정하는 것도 가능합니다.
+> **TL;DR** — `KubernetesExecutor`를 이미 쓰고 있다면 대부분의 경우 `KubernetesPodOperator`(KPO)는 필요하지 않습니다. `executor_config`로 이미지·리소스·GPU를 태스크별로 제어할 수 있기 때문입니다. KPO가 진짜 필요한 경우는 좁습니다: **이미지에 Airflow를 설치할 수 없거나**, **KubernetesExecutor를 쓰지 않는 환경**에서 일부 태스크만 K8s Pod로 실행해야 할 때입니다.
 
 ---
 
@@ -13,144 +13,74 @@ tags: [airflow, kubernetes, pod-operator, kubernetes-executor, 운영, 인프라
 
 | | 한 줄 정의 |
 |---|---|
-| **KubernetesExecutor** | Airflow 스케줄러가 **모든 태스크**를 K8s Pod로 실행하는 실행 엔진 |
-| **KubernetesPodOperator** | **특정 태스크** 하나가 외부 K8s Pod를 띄워 작업을 위임하는 오퍼레이터 |
-| **멀티 익스큐터 (3.x)** | 하나의 Airflow 클러스터에서 **복수의 익스큐터**를 등록하고 태스크별로 선택하는 기능 |
-
-핵심은 **계층이 다르다**는 점입니다. KubernetesExecutor는 "Airflow 자체가 어떻게 태스크를 실행하느냐"를 결정하고, KubernetesPodOperator는 "이 태스크가 무엇을 실행하느냐"를 결정합니다.
+| **KubernetesExecutor** | 스케줄러가 **모든 태스크**를 K8s Pod로 실행하는 실행 엔진 |
+| **KubernetesPodOperator** | **특정 태스크 하나**가 외부 K8s Pod를 직접 생성·감시하는 오퍼레이터 |
+| **멀티 익스큐터 (3.x)** | 하나의 클러스터에서 복수의 익스큐터를 등록하고 태스크별로 선택 |
 
 ---
 
 ## 2. 작동 방식 비교
 
-### KubernetesExecutor — 익스큐터 계층
+### KubernetesExecutor
 
-스케줄러가 태스크마다 직접 K8s Pod를 생성합니다. Pod 이미지는 기본적으로 Airflow Worker 이미지입니다.
+스케줄러가 태스크마다 K8s Pod를 직접 생성합니다. Pod 이미지는 Airflow Worker 이미지가 기본이며, `executor_config`로 태스크별 오버라이드가 가능합니다.
 
 ```
 [Airflow Scheduler]
     │  Pod 생성 요청 (K8s API)
     ▼
 [Kubernetes API Server]
-    │
-    ├── [Worker Pod] ──▶ task_a (airflow 이미지로 실행)
-    ├── [Worker Pod] ──▶ task_b (airflow 이미지로 실행)
-    └── [Worker Pod] ──▶ task_c (airflow 이미지로 실행)
+    ├── [Worker Pod] ──▶ task_a  (airflow 이미지 또는 오버라이드 이미지)
+    ├── [Worker Pod] ──▶ task_b
+    └── [Worker Pod] ──▶ task_c
 ```
 
-Pod는 Airflow가 알아서 생성·삭제합니다. DAG 코드는 Worker Pod 안의 Airflow Task SDK가 실행합니다.
+**중요**: 오버라이드된 이미지에도 **Airflow(Task SDK)가 설치돼 있어야** 합니다. 스케줄러가 띄운 Pod 안에서 `airflow tasks run` 명령이 실행되기 때문입니다.
 
-### KubernetesPodOperator — 오퍼레이터 계층
+### KubernetesPodOperator
 
-Worker(또는 스케줄러) 안에서 실행 중인 KPO 코드가 K8s API를 호출해 **별도 Pod**를 띄웁니다.
+이미 실행 중인 Worker(또는 스케줄러) 안의 KPO 코드가 K8s API를 호출해 **별도 Pod**를 생성합니다.
 
 ```
-[Airflow Worker or Scheduler]
+[Airflow Worker Pod (airflow 이미지)]
     │  KPO 코드 실행 중
     │  Pod 생성 요청 (K8s API)
     ▼
-[Kubernetes API Server]
-    │
-    └── [Task Pod] ──▶ my-spark-image:3.5 실행
-                       (Airflow와 무관한 이미지)
+[Task Pod] ──▶ spark:3.5, dbt:1.8, java:17 ...
+               (Airflow 설치 불필요)
 ```
 
-KPO가 띄운 Pod는 Airflow와 완전히 다른 이미지를 쓸 수 있습니다. Airflow는 Pod의 완료 여부만 감시합니다.
-
-### 두 계층의 중첩
-
-KubernetesExecutor + KubernetesPodOperator를 함께 쓰면 Pod가 Pod를 생성하는 구조가 됩니다.
-
-```
-[Scheduler] ──▶ [Worker Pod (Airflow 이미지)]
-                    │  KPO 코드 실행
-                    └──▶ [Task Pod (spark 이미지)]
-```
-
-이 구조는 완전히 유효하지만, Pod 2개 분의 기동 시간과 리소스가 필요합니다.
+KubernetesExecutor 환경에서 KPO를 쓰면 **Pod이 Pod를 생성하는 구조**가 됩니다. Pod 2개 분의 기동 시간과 리소스가 필요합니다.
 
 ---
 
-## 3. 핵심 차이점 비교
+## 3. KubernetesExecutor + executor_config로 충분한 경우
 
-| 항목 | KubernetesExecutor | KubernetesPodOperator |
-|---|---|---|
-| **계층** | 실행 엔진 (Executor) | 오퍼레이터 (Operator) |
-| **적용 범위** | 모든 태스크 | 이 오퍼레이터를 쓰는 태스크만 |
-| **Pod 생성 주체** | Airflow 스케줄러 | 태스크 코드 (KPO) |
-| **기본 이미지** | Airflow Worker 이미지 | 사용자 지정 (완전 자유) |
-| **이미지 다양성** | 태스크별 오버라이드 가능 | 태스크마다 완전히 다른 이미지 |
-| **로그 수집** | Pod 삭제 전 원격 스토리지 설정 필요 | KPO가 로그 fetch 후 Airflow에 전달 |
-| **Airflow 의존성** | Worker Pod에 Airflow 설치 필요 | Task Pod에 Airflow 불필요 |
-| **K8s 클러스터 요구** | 필수 | 필수 (단, Executor와 무관) |
-| **Airflow 3.x 변경** | 멀티 익스큐터로 태스크별 지정 가능 | deferrable=True가 기본 권장 |
+**KubernetesExecutor를 쓰고 있다면, 아래 요구사항은 KPO 없이 `executor_config`로 해결됩니다.**
 
----
-
-## 4. Airflow 3.x 멀티 익스큐터
-
-Airflow 3.0부터 하나의 클러스터에서 **여러 익스큐터를 동시에 등록**하고, 태스크 단위로 어느 익스큐터로 실행할지 지정할 수 있습니다.
-
-### 설정
-
-```ini
-# airflow.cfg
-[core]
-executor = CeleryExecutor,KubernetesExecutor
-```
-
-```bash
-AIRFLOW__CORE__EXECUTOR=CeleryExecutor,KubernetesExecutor
-```
-
-첫 번째로 선언된 익스큐터가 기본값이 됩니다. 위 예시에서 `executor` 파라미터를 지정하지 않은 태스크는 CeleryExecutor로 실행됩니다.
-
-### 태스크별 익스큐터 지정
-
-```python
-from airflow.sdk import dag, task
-import pendulum
-
-@dag(
-    schedule="0 2 * * *",
-    start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
-    catchup=False,
-)
-def pipeline():
-
-    @task(executor="CeleryExecutor")
-    def extract():
-        # 빠른 추출 — Celery Worker에서 실행
-        ...
-
-    @task(executor="CeleryExecutor")
-    def transform():
-        # 가벼운 변환 — Celery Worker에서 실행
-        ...
-
-    @task(executor="KubernetesExecutor")
-    def train_model():
-        # GPU 필요, 무거운 작업 — K8s Pod에서 실행
-        ...
-
-    extract() >> transform() >> train_model()
-
-
-pipeline()
-```
-
-같은 DAG 안에서 경량 태스크는 Celery(빠른 기동), 무거운 태스크는 K8s(격리·GPU)로 자연스럽게 분리됩니다.
-
-### KubernetesExecutor에서 이미지 오버라이드
-
-특정 태스크에 다른 이미지나 리소스를 지정할 수 있습니다.
+### 태스크별 이미지 오버라이드
 
 ```python
 @task(
-    executor="KubernetesExecutor",
     executor_config={
         "KubernetesExecutor": {
-            "image": "my-registry/custom-airflow:gpu",
+            "image": "my-registry/custom-airflow:ml-deps",
+            # 이 이미지에도 Airflow가 설치돼 있어야 함
+        }
+    }
+)
+def train():
+    import torch
+    ...
+```
+
+### 태스크별 리소스·GPU 제어
+
+```python
+@task(
+    executor_config={
+        "KubernetesExecutor": {
+            "image": "my-registry/airflow-gpu:3.2",
             "resources": {
                 "requests": {"memory": "8Gi", "cpu": "4", "nvidia.com/gpu": "1"},
                 "limits":   {"memory": "16Gi", "cpu": "8", "nvidia.com/gpu": "1"},
@@ -158,194 +88,204 @@ pipeline()
             "tolerations": [
                 {"key": "nvidia.com/gpu", "operator": "Exists", "effect": "NoSchedule"}
             ],
+            "node_selector": {"cloud.google.com/gke-accelerator": "nvidia-tesla-t4"},
         }
-    },
+    }
 )
-def train_model():
+def heavy_ml_task():
     ...
 ```
 
----
+### 태스크별 환경변수·볼륨
 
-## 5. KubernetesExecutor를 써야 할 때
-
-- 모든(또는 대부분의) 태스크를 **격리된 Pod**에서 실행하고 싶다
-- 상시 워커 비용을 없애고 싶다 (유휴 Pod 없음)
-- 태스크가 다른 Python 패키지 환경을 필요로 한다
-- K8s 클러스터를 이미 운영 중이고 인프라 팀이 있다
-- Airflow 3.x 멀티 익스큐터로 익스큐터를 태스크별로 분리하려 한다
-
-```ini
-[core]
-executor = KubernetesExecutor
-
-[kubernetes]
-namespace = airflow
-in_cluster = True
-worker_container_repository = my-registry/airflow
-worker_container_tag = 3.2.0
+```python
+@task(
+    executor_config={
+        "KubernetesExecutor": {
+            "env_vars": [{"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "db-secret", "key": "password"}}}],
+            "volumes": [{"name": "data", "persistentVolumeClaim": {"claimName": "data-pvc"}}],
+            "volume_mounts": [{"name": "data", "mountPath": "/data"}],
+        }
+    }
+)
+def process():
+    ...
 ```
 
+**이 정도면 충분합니다.** 같은 K8s 클러스터 안에서 KPO를 추가로 쓸 이유가 없습니다.
+
 ---
 
-## 6. KubernetesPodOperator를 써야 할 때
+## 4. KPO가 진짜 필요한 3가지 경우
 
-- **특정 태스크만** Airflow와 완전히 다른 환경(이미지)에서 실행해야 한다
-  - 예: Spark 작업, dbt 실행, ML 학습, 레거시 Java/Go 도구
-- Airflow Worker에 해당 의존성을 설치하고 싶지 않다
-- Task Pod의 리소스(CPU/메모리/GPU)를 태스크별로 세밀하게 제어해야 한다
-- Executor 종류에 관계없이 K8s Pod 실행이 필요하다 (CeleryExecutor 환경도 포함)
+### 케이스 1: 이미지에 Airflow를 설치할 수 없거나 설치하기 싫을 때
+
+KubernetesExecutor의 이미지 오버라이드는 이미지 안에 Airflow가 있어야 동작합니다. 다음 상황이면 KPO가 필요합니다.
+
+- **순수 런타임 이미지** 그대로 쓰고 싶은 경우: `apache/spark:3.5`, `ghcr.io/dbt-labs/dbt-bigquery:1.8`, 사내 레거시 Java 이미지 등에 Airflow를 추가하는 게 불가하거나 이미지 관리 정책상 허용되지 않을 때
+- 이미지 크기를 최소화해야 하는 경우
 
 ```python
 from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
-from airflow.sdk import dag
-import pendulum
 
-@dag(
-    schedule="0 3 * * *",
-    start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
-    catchup=False,
+run_dbt = KubernetesPodOperator(
+    task_id="run_dbt",
+    image="ghcr.io/dbt-labs/dbt-bigquery:1.8.0",  # Airflow 없음
+    cmds=["dbt", "run"],
+    arguments=["--project-dir", "/dbt"],
+    namespace="airflow",
+    deferrable=True,   # Airflow 3.x 권장
+    get_logs=True,
+    is_delete_operator_pod=True,
 )
-def dbt_pipeline():
-
-    run_dbt = KubernetesPodOperator(
-        task_id="run_dbt",
-        name="dbt-run",
-        namespace="airflow",
-        image="ghcr.io/dbt-labs/dbt-bigquery:1.8.0",
-        cmds=["dbt"],
-        arguments=["run", "--project-dir", "/dbt", "--profiles-dir", "/dbt"],
-        env_vars={"DBT_PROFILES_DIR": "/dbt"},
-        resources={
-            "request_memory": "2Gi",
-            "request_cpu": "1",
-        },
-        deferrable=True,   # Airflow 3.x 권장 — 폴링 대신 트리거 기반 대기
-        get_logs=True,
-        is_delete_operator_pod=True,
-    )
-
-
-dbt_pipeline()
 ```
 
-### deferrable=True (Airflow 3.x 권장)
+### 케이스 2: KubernetesExecutor를 쓰지 않는 환경에서 일부 태스크만 K8s Pod로 실행
 
-`deferrable=True`를 쓰면 KPO가 Pod 완료를 폴링하는 대신 **Triggerer**에게 감시를 위임합니다. Worker 슬롯을 점유하지 않아 대규모 병렬 실행에 유리합니다. Airflow 3.x에서는 기본값으로 설정하는 것을 권장합니다.
-
----
-
-## 7. 조합 패턴 3가지
-
-### 패턴 1: CeleryExecutor + KubernetesPodOperator
-
-Celery Worker 위에서 KPO가 K8s Pod를 띄웁니다. K8s는 KPO용 클러스터만 있으면 되고, Airflow 자체는 VM/Docker 환경에서 돌릴 수 있습니다.
+CeleryExecutor 또는 LocalExecutor 환경에서 특정 태스크만 K8s Pod로 실행해야 할 때입니다.
 
 ```
-Celery Worker ──▶ KubernetesPodOperator 코드 실행
-                    └──▶ [Task Pod] spark-image:3.5
+CeleryExecutor 환경:
+    Celery Worker ──▶ 일반 태스크 실행
+    Celery Worker ──▶ KPO 코드 실행 → [K8s Task Pod]
 ```
 
-**적합한 상황**: Airflow는 기존 Celery 환경 유지 + 일부 헤비 태스크만 K8s로 분리하고 싶을 때.
+### 케이스 3: 다른 K8s 클러스터에 Pod를 띄워야 할 때
 
-### 패턴 2: KubernetesExecutor + KubernetesPodOperator
-
-Worker Pod 안에서 KPO가 또 다른 Pod를 생성합니다. Pod-in-Pod 구조입니다.
-
-```
-[Scheduler] ──▶ [Worker Pod (airflow)]
-                    └──▶ [Task Pod (spark)]
-```
-
-**적합한 상황**: 모든 태스크를 K8s에서 격리 실행하되, 일부 태스크는 완전히 다른 이미지·환경이 필요할 때.
-
-**주의**: Pod 2개 분의 기동 시간이 더해집니다. 짧은 태스크라면 오버헤드가 부담됩니다.
-
-### 패턴 3: 멀티 익스큐터 + KubernetesPodOperator (Airflow 3.x)
-
-가장 유연한 조합입니다. 경량 태스크는 Celery, 무거운 태스크는 K8s, 특수 환경 태스크는 KPO로 명시적으로 분리합니다.
-
-```python
-@dag(...)
-def pipeline():
-
-    @task(executor="CeleryExecutor")          # 빠른 추출
-    def extract(): ...
-
-    @task(executor="KubernetesExecutor")      # 격리 필요한 변환
-    def transform(): ...
-
-    run_spark = KubernetesPodOperator(        # 완전히 다른 이미지
-        task_id="run_spark",
-        image="apache/spark:3.5",
-        ...
-        deferrable=True,
-    )
-
-    extract() >> transform() >> run_spark
-```
-
----
-
-## 8. 함정 / 흔한 혼동
-
-### "KPO를 쓰려면 KubernetesExecutor가 필요하다"
-
-**오해입니다.** KPO는 Executor와 무관합니다. LocalExecutor, CeleryExecutor 환경에서도 KPO는 동작합니다. KPO가 K8s API에 직접 접근할 수만 있으면 됩니다(`kubeconfig` 또는 `in_cluster` 설정).
-
-### "KubernetesExecutor를 쓰면 이미지를 마음대로 바꿀 수 있다"
-
-기본 이미지는 Airflow Worker 이미지입니다. `executor_config`로 오버라이드할 수 있지만, **그 이미지에도 Airflow가 설치돼 있어야** 합니다(Task SDK가 태스크를 실행해야 하므로). 완전히 다른 런타임(spark, dbt 등)이 필요하다면 KPO가 맞습니다.
-
-### KPO 로그 소실
-
-`is_delete_operator_pod=True`(기본값)이면 Pod 종료와 동시에 로그가 사라집니다. 반드시 `get_logs=True`와 함께 원격 로그 스토리지(S3, GCS 등)를 설정하세요. 그렇지 않으면 실패한 태스크의 로그를 볼 수 없습니다.
+Airflow가 뜬 클러스터가 아닌 별도 클러스터(예: 운영 데이터 클러스터, 온프레미스 GPU 클러스터)에 워크로드를 보내야 할 때, `kubernetes_conn_id`로 다른 클러스터를 지정할 수 있습니다.
 
 ```python
 KubernetesPodOperator(
+    task_id="run_on_gpu_cluster",
+    kubernetes_conn_id="gpu_cluster_conn",  # 별도 클러스터 연결
+    image="my-ml-image:latest",
     ...
-    get_logs=True,
-    is_delete_operator_pod=True,  # 로그 fetch 완료 후 삭제
 )
 ```
 
-### 멀티 익스큐터에서 첫 번째 선언이 기본값
+---
 
-`executor = CeleryExecutor,KubernetesExecutor`로 설정하면 `executor` 파라미터를 생략한 모든 태스크는 CeleryExecutor로 실행됩니다. 의도치 않게 모든 태스크가 Celery로만 가는 상황을 주의하세요.
+## 5. Airflow 3.x 멀티 익스큐터
+
+Airflow 3.0부터 하나의 클러스터에서 복수의 익스큐터를 동시에 운영하고 태스크별로 선택할 수 있습니다. 이 기능이 있으면 `CeleryKubernetesExecutor`(Airflow 2.x 방식)보다 훨씬 명시적으로 제어할 수 있습니다.
+
+```ini
+# airflow.cfg
+[core]
+executor = CeleryExecutor,KubernetesExecutor
+# 첫 번째가 기본값 — executor 파라미터 생략 시 CeleryExecutor로 실행
+```
+
+```python
+@dag(schedule="0 2 * * *", start_date=pendulum.datetime(2026, 1, 1, tz="UTC"), catchup=False)
+def pipeline():
+
+    @task(executor="CeleryExecutor")          # 빠른 기동, 경량 작업
+    def extract(): ...
+
+    @task(executor="CeleryExecutor")
+    def transform(): ...
+
+    @task(
+        executor="KubernetesExecutor",        # 격리 필요, 무거운 작업
+        executor_config={
+            "KubernetesExecutor": {
+                "image": "my-registry/airflow-gpu:3.2",  # Airflow 포함
+                "resources": {"requests": {"nvidia.com/gpu": "1"}},
+            }
+        },
+    )
+    def train(): ...
+
+    extract() >> transform() >> train()
+```
+
+KPO 없이 이 구조만으로 경량/중량 태스크를 깔끔하게 분리할 수 있습니다.
 
 ---
 
-## 9. 의사결정 체크리스트
+## 6. 조합 패턴과 안티패턴
 
-**KubernetesExecutor 선택 신호**
-- [ ] 모든(또는 대부분) 태스크를 격리된 환경에서 실행해야 한다
-- [ ] 상시 Worker 비용을 없애고 싶다
-- [ ] Airflow 3.x 멀티 익스큐터로 일부 태스크만 K8s 격리하고 싶다
-- [ ] K8s 클러스터와 운영 역량이 이미 있다
+### 권장: CeleryExecutor + KPO (케이스 2)
 
-**KubernetesPodOperator 선택 신호**
-- [ ] 특정 태스크만 Airflow와 완전히 다른 이미지(Spark, dbt, ML 등)로 실행해야 한다
-- [ ] Task Pod에 Airflow를 설치하고 싶지 않다
-- [ ] Executor 종류와 무관하게 K8s Pod 실행이 필요하다
-- [ ] 태스크별로 리소스(CPU/메모리/GPU)를 개별 제어해야 한다
+```
+Celery Worker ──▶ KPO ──▶ [K8s Task Pod (pure spark 이미지)]
+```
 
-**멀티 익스큐터 선택 신호 (Airflow 3.x)**
-- [ ] 하나의 DAG에 경량 태스크(Celery)와 무거운 태스크(K8s)가 섞여 있다
-- [ ] CeleryKubernetesExecutor(Airflow 2.x 방식) 대신 더 명시적인 제어를 원한다
-- [ ] 태스크마다 최적의 실행 환경을 선택하고 싶다
+Airflow 자체는 Celery로 운영하면서, Airflow를 설치할 수 없는 순수 런타임 이미지만 K8s Pod로 분리할 때 유효합니다.
+
+### 권장: KubernetesExecutor + executor_config (케이스 없음)
+
+```
+Scheduler ──▶ [Worker Pod (airflow + 필요한 deps 포함 이미지)]
+```
+
+KPO 없이 executor_config 이미지 오버라이드로 대부분 해결합니다.
+
+### 주의: KubernetesExecutor + KPO
+
+```
+Scheduler ──▶ [Worker Pod (airflow)] ──▶ KPO ──▶ [Task Pod (pure 이미지)]
+```
+
+이미지에 Airflow를 설치할 수 없는 경우(케이스 1)에만 정당화됩니다. 그 외에는 Pod 2중 기동 오버헤드만 추가됩니다.
+
+---
+
+## 7. 함정 / 흔한 혼동
+
+### "KPO를 쓰면 어떤 이미지든 쓸 수 있으니 KubernetesExecutor + KPO가 최선이다"
+
+오해입니다. KubernetesExecutor 환경에서 이미지에 Airflow를 포함시킬 수 있다면 `executor_config`로 충분합니다. KPO는 Airflow를 넣을 수 없을 때의 탈출구이지, 기본 선택지가 아닙니다.
+
+### "KPO를 쓰려면 KubernetesExecutor가 필요하다"
+
+반대입니다. KPO는 Executor와 무관합니다. LocalExecutor나 CeleryExecutor 위에서도 KPO는 동작합니다. KPO가 K8s API에 접근할 수만 있으면 됩니다.
+
+### executor_config 이미지 오버라이드 후 태스크 실패
+
+오버라이드 이미지에 Airflow가 없으면 `airflow tasks run` 실행이 불가해 Pod가 즉시 실패합니다. "이미지에 Airflow 없음 → KPO 사용"이 올바른 판단 흐름입니다.
+
+### KPO 로그 소실
+
+`is_delete_operator_pod=True`(기본값) 환경에서 `get_logs=True` 없이 원격 로그 스토리지를 미설정하면 실패한 태스크의 로그가 Pod 삭제와 함께 사라집니다.
+
+---
+
+## 8. 의사결정 플로우
+
+```
+KubernetesExecutor를 이미 쓰고 있나?
+    │
+    ├── YES
+    │     │
+    │     ├── 태스크 이미지에 Airflow를 포함시킬 수 있나?
+    │     │       ├── YES → executor_config 이미지 오버라이드 사용 (KPO 불필요)
+    │     │       └── NO  → KPO 사용 (케이스 1)
+    │     │
+    │     └── 다른 K8s 클러스터에 Pod를 보내야 하나?
+    │               └── YES → KPO + kubernetes_conn_id 사용 (케이스 3)
+    │
+    └── NO (CeleryExecutor / LocalExecutor)
+          │
+          ├── 일부 태스크만 K8s Pod로 실행하고 싶나?
+          │       └── YES → KPO 사용 (케이스 2)
+          │
+          └── 모든 태스크를 K8s Pod로 실행하고 싶나?
+                    └── YES → KubernetesExecutor로 전환 고려
+```
 
 ---
 
 ## 마무리
 
-**KubernetesExecutor**는 Airflow 전체의 실행 방식을 바꾸고, **KubernetesPodOperator**는 특정 태스크 하나의 실행 환경을 바꿉니다. 이 둘은 충돌하지 않고 조합됩니다.
+**KubernetesExecutor를 이미 운영 중이라면, KPO는 마지막 수단입니다.**
 
-Airflow 3.x의 멀티 익스큐터는 이 그림을 더 명확하게 만들어 줍니다. "이 태스크는 Celery로, 저 태스크는 K8s로"를 DAG 코드에 명시할 수 있어 암묵적인 queue·pool 기반 라우팅보다 의도가 훨씬 뚜렷합니다.
+- 이미지에 Airflow를 포함시킬 수 있다 → `executor_config`로 해결
+- GPU, 특수 리소스, 노드 셀렉터 → `executor_config`로 해결
+- Airflow 3.x 멀티 익스큐터 → `executor` 파라미터로 해결
 
-헷갈릴 때는 이 질문 하나로 정리하세요:
-
-> "모든 태스크의 실행 방식을 바꾸고 싶나?" → **KubernetesExecutor**
-> "이 태스크만 다른 이미지·환경에서 실행하고 싶나?" → **KubernetesPodOperator**
+KPO를 추가하면 Pod-in-Pod 구조가 만들어지고, 기동 지연·리소스 낭비·로그 설정 부담이 따릅니다. "이미지에 Airflow를 넣을 수 없다"는 조건이 충족될 때만 KPO를 선택하세요.
 
 ---
 
