@@ -13,10 +13,12 @@ tags: [claude-code, claude-md, 컨텍스트, 프롬프트, 설정]
 
 Claude Code는 세션을 시작할 때 다음 순서로 `CLAUDE.md`를 탐색합니다.
 
-```
-~/.claude/CLAUDE.md          # 전역 (모든 프로젝트 공통)
-{project-root}/CLAUDE.md     # 프로젝트 루트
-{sub-dir}/CLAUDE.md          # 하위 디렉토리 (해당 디렉토리 작업 시)
+```mermaid
+flowchart TD
+    G["~/.claude/CLAUDE.md\n전역 (모든 프로젝트 공통)"]
+    P["{project-root}/CLAUDE.md\n프로젝트 루트"]
+    S["{sub-dir}/CLAUDE.md\n하위 디렉토리 (해당 디렉토리 작업 시)"]
+    G --> P --> S
 ```
 
 이 파일의 내용은 **시스템 프롬프트에 자동으로 주입**됩니다. 사용자가 매번 설명하지 않아도 Claude가 프로젝트 구조, 규칙, 주의사항을 알고 시작합니다.

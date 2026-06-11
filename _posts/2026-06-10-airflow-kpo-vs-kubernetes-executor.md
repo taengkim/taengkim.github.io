@@ -25,14 +25,15 @@ tags: [airflow, kubernetes, pod-operator, kubernetes-executor, 운영, 인프라
 
 스케줄러가 태스크마다 K8s Pod를 직접 생성합니다. Pod 이미지는 Airflow Worker 이미지가 기본이며, `executor_config`로 태스크별 오버라이드가 가능합니다.
 
-```
-[Airflow Scheduler]
-    │  Pod 생성 요청 (K8s API)
-    ▼
-[Kubernetes API Server]
-    ├── [Worker Pod] ──▶ task_a  (airflow 이미지 또는 오버라이드 이미지)
-    ├── [Worker Pod] ──▶ task_b
-    └── [Worker Pod] ──▶ task_c
+```mermaid
+flowchart TD
+    Scheduler["Airflow Scheduler"]
+    K8s["Kubernetes API Server"]
+    P1["Worker Pod\ntask_a (airflow 이미지)"]
+    P2["Worker Pod\ntask_b"]
+    P3["Worker Pod\ntask_c"]
+    Scheduler -->|"Pod 생성 요청 (K8s API)"| K8s
+    K8s --> P1 & P2 & P3
 ```
 
 **중요**: 오버라이드된 이미지에도 **Airflow(Task SDK)가 설치돼 있어야** 합니다. 스케줄러가 띄운 Pod 안에서 `airflow tasks run` 명령이 실행되기 때문입니다.
@@ -41,13 +42,13 @@ tags: [airflow, kubernetes, pod-operator, kubernetes-executor, 운영, 인프라
 
 이미 실행 중인 Worker(또는 스케줄러) 안의 KPO 코드가 K8s API를 호출해 **별도 Pod**를 생성합니다.
 
-```
-[Airflow Worker Pod (airflow 이미지)]
-    │  KPO 코드 실행 중
-    │  Pod 생성 요청 (K8s API)
-    ▼
-[Task Pod] ──▶ spark:3.5, dbt:1.8, java:17 ...
-               (Airflow 설치 불필요)
+```mermaid
+flowchart TD
+    Worker["Airflow Worker Pod\n(airflow 이미지)"]
+    K8s["Kubernetes API Server"]
+    TaskPod["Task Pod\nspark:3.5 · dbt:1.8 · java:17\n(Airflow 설치 불필요)"]
+    Worker -->|"KPO 코드 실행\nPod 생성 요청 (K8s API)"| K8s
+    K8s --> TaskPod
 ```
 
 KubernetesExecutor 환경에서 KPO를 쓰면 **Pod이 Pod를 생성하는 구조**가 됩니다. Pod 2개 분의 기동 시간과 리소스가 필요합니다.
@@ -208,24 +209,27 @@ KPO 없이 이 구조만으로 경량/중량 태스크를 깔끔하게 분리할
 
 ### 권장: CeleryExecutor + KPO (케이스 2)
 
-```
-Celery Worker ──▶ KPO ──▶ [K8s Task Pod (pure spark 이미지)]
+```mermaid
+flowchart LR
+    W["Celery Worker"] --> KPO["KubernetesPodOperator"] --> Pod["K8s Task Pod\n(pure spark 이미지)"]
 ```
 
 Airflow 자체는 Celery로 운영하면서, Airflow를 설치할 수 없는 순수 런타임 이미지만 K8s Pod로 분리할 때 유효합니다.
 
 ### 권장: KubernetesExecutor + executor_config (케이스 없음)
 
-```
-Scheduler ──▶ [Worker Pod (airflow + 필요한 deps 포함 이미지)]
+```mermaid
+flowchart LR
+    S["Scheduler"] --> W["Worker Pod\n(airflow + 필요한 deps 포함 이미지)"]
 ```
 
 KPO 없이 executor_config 이미지 오버라이드로 대부분 해결합니다.
 
 ### 주의: KubernetesExecutor + KPO
 
-```
-Scheduler ──▶ [Worker Pod (airflow)] ──▶ KPO ──▶ [Task Pod (pure 이미지)]
+```mermaid
+flowchart LR
+    S["Scheduler"] --> W["Worker Pod\n(airflow)"] --> KPO["KPO"] --> T["Task Pod\n(pure 이미지)"]
 ```
 
 이미지에 Airflow를 설치할 수 없는 경우(케이스 1)에만 정당화됩니다. 그 외에는 Pod 2중 기동 오버헤드만 추가됩니다.
@@ -254,25 +258,27 @@ Scheduler ──▶ [Worker Pod (airflow)] ──▶ KPO ──▶ [Task Pod (pu
 
 ## 8. 의사결정 플로우
 
-```
-KubernetesExecutor를 이미 쓰고 있나?
-    │
-    ├── YES
-    │     │
-    │     ├── 태스크 이미지에 Airflow를 포함시킬 수 있나?
-    │     │       ├── YES → executor_config 이미지 오버라이드 사용 (KPO 불필요)
-    │     │       └── NO  → KPO 사용 (케이스 1)
-    │     │
-    │     └── 다른 K8s 클러스터에 Pod를 보내야 하나?
-    │               └── YES → KPO + kubernetes_conn_id 사용 (케이스 3)
-    │
-    └── NO (CeleryExecutor / LocalExecutor)
-          │
-          ├── 일부 태스크만 K8s Pod로 실행하고 싶나?
-          │       └── YES → KPO 사용 (케이스 2)
-          │
-          └── 모든 태스크를 K8s Pod로 실행하고 싶나?
-                    └── YES → KubernetesExecutor로 전환 고려
+```mermaid
+flowchart TD
+    Q1{"KubernetesExecutor를\n이미 쓰고 있나?"}
+    Q2{"태스크 이미지에\nAirflow 포함 가능?"}
+    Q3{"다른 K8s 클러스터에\nPod 보내야 하나?"}
+    Q4{"일부 태스크만\nK8s Pod로 실행?"}
+    Q5{"모든 태스크를\nK8s Pod로 실행?"}
+    A1["executor_config 이미지 오버라이드\n(KPO 불필요)"]
+    A2["KPO 사용\n(케이스 1)"]
+    A3["KPO + kubernetes_conn_id\n(케이스 3)"]
+    A4["KPO 사용\n(케이스 2)"]
+    A5["KubernetesExecutor\n전환 고려"]
+    Q1 -->|YES| Q2
+    Q1 -->|YES| Q3
+    Q1 -->|"NO\n(Celery/Local)"| Q4
+    Q2 -->|YES| A1
+    Q2 -->|NO| A2
+    Q3 -->|YES| A3
+    Q4 -->|YES| A4
+    Q4 -->|NO| Q5
+    Q5 -->|YES| A5
 ```
 
 ---

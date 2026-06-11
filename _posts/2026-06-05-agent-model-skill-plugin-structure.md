@@ -12,28 +12,16 @@ Claude Code에서 Agent를 사용할 때 내부적으로 **모델(Model)**, **�
 
 ## 전체 구조 한눈에 보기
 
-```
-사용자 요청 (자연어)
-       ↓
-┌─────────────────────────────────────┐
-│         메인 Agent (Claude 모델)      │
-│                                     │
-│  ┌──────────┐  ┌─────────────────┐  │
-│  │  Skills  │  │   Sub-Agents    │  │
-│  │ /review  │  │  Explore agent  │  │
-│  │ /research│  │  Plan agent     │  │
-│  │ /run     │  │  general agent  │  │
-│  └──────────┘  └─────────────────┘  │
-│                                     │
-│  ┌───────────────────────────────┐  │
-│  │      MCP Plugins              │  │
-│  │  mcp__github__*               │  │
-│  │  mcp__slack__*                │  │
-│  │  mcp__postgres__*             │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
-       ↓
-   결과 반환
+```mermaid
+flowchart TD
+    User["사용자 요청 (자연어)"]
+    subgraph MainAgent["메인 Agent (Claude 모델)"]
+        Skills["Skills\n/review · /research · /run"]
+        SubAgents["Sub-Agents\nExplore · Plan · general"]
+        MCP["MCP Plugins\nmcp__github__* · mcp__slack__*\nmcp__postgres__*"]
+    end
+    Result["결과 반환"]
+    User --> MainAgent --> Result
 ```
 
 세 계층의 역할을 간단히 정리하면:
@@ -62,12 +50,12 @@ Claude Code는 작업 성격에 따라 다른 모델을 선택할 수 있습니�
 
 ### 모델이 하는 일
 
-```
-[입력] 사용자 요청 + 시스템 프롬프트 + 도구 스키마
-         ↓
-[처리] 컨텍스트 이해 → 계획 수립 → 도구 선택 → 실행 판단
-         ↓
-[출력] 텍스트 응답 또는 도구 호출 (tool_use)
+```mermaid
+flowchart LR
+    Input["입력\n사용자 요청 + 시스템 프롬프트 + 도구 스키마"]
+    Process["처리\n컨텍스트 이해 → 계획 수립 → 도구 선택 → 실행 판단"]
+    Output["출력\n텍스트 응답 또는 도구 호출 (tool_use)"]
+    Input --> Process --> Output
 ```
 
 모델은 직접 코드를 실행하거나 파일을 수정하지 않습니다.  
@@ -97,22 +85,26 @@ Claude Code는 `Agent` 도구로 특화된 서브 에이전트를 생성할 수 
 
 **병렬 처리**: 독립적인 작업을 동시에 실행해 속도를 높입니다.
 
-```
-메인 에이전트
-  ├── [Agent: Explore] 프론트엔드 코드 탐색  ──┐
-  ├── [Agent: Explore] 백엔드 API 탐색        ├→ 동시 실행
-  └── [Agent: Explore] 테스트 코드 탐색      ──┘
-         ↓ 결과 수집
-  코드 분석 완료
+```mermaid
+flowchart TD
+    Main["메인 에이전트"]
+    A1["Agent: Explore\n프론트엔드 코드 탐색"]
+    A2["Agent: Explore\n백엔드 API 탐색"]
+    A3["Agent: Explore\n테스트 코드 탐색"]
+    Collect["결과 수집\n코드 분석 완료"]
+    Main --> A1 & A2 & A3 --> Collect
 ```
 
 **전문화 처리**: 특정 작업에 최적화된 에이전트에게 위임합니다.
 
-```
-메인 에이전트: "새 기능을 구현해줘"
-  ├── [Agent: Plan] 구현 계획 수립
-  ├── 계획 검토 후 구현 진행
-  └── [Agent: Explore] 관련 파일 빠른 탐색
+```mermaid
+flowchart TD
+    Main["메인 에이전트\n'새 기능을 구현해줘'"]
+    Plan["Agent: Plan\n구현 계획 수립"]
+    Review["계획 검토 후 구현 진행"]
+    Explore["Agent: Explore\n관련 파일 빠른 탐색"]
+    Main --> Plan --> Review
+    Main --> Explore
 ```
 
 ---
@@ -144,18 +136,16 @@ Claude Code는 `Agent` 도구로 특화된 서브 에이전트를 생성할 수 
 
 ### 스킬 실행 흐름
 
-```
-사용자: /code-review
-         ↓
-[Skill 도구 호출]
-  ↓
-스킬 내부 실행:
-  1. git diff 조회 (Bash 도구)
-  2. 변경 파일 읽기 (Read 도구)
-  3. 코드 분석 (모델 추론)
-  4. 리뷰 결과 정리
-         ↓
-사용자에게 리뷰 결과 반환
+```mermaid
+flowchart TD
+    User["사용자: /code-review"]
+    Skill["Skill 도구 호출"]
+    S1["1. git diff 조회 (Bash 도구)"]
+    S2["2. 변경 파일 읽기 (Read 도구)"]
+    S3["3. 코드 분석 (모델 추론)"]
+    S4["4. 리뷰 결과 정리"]
+    Result["사용자에게 리뷰 결과 반환"]
+    User --> Skill --> S1 --> S2 --> S3 --> S4 --> Result
 ```
 
 ---
@@ -180,22 +170,13 @@ mcp__postgres__query
 
 ### MCP 서버 구조
 
-```
-┌─────────────────────────────────────┐
-│           Claude (모델)              │
-│  "GitHub에 PR을 만들어줘"            │
-└────────────────┬────────────────────┘
-                 │ mcp__github__create_pull_request 호출
-                 ↓
-┌─────────────────────────────────────┐
-│         MCP 서버 (github)            │
-│  - 도구 스키마 정의                   │
-│  - 인증 처리 (토큰 관리)              │
-│  - API 호출 실행                     │
-└────────────────┬────────────────────┘
-                 │ REST API 호출
-                 ↓
-         GitHub API 서버
+```mermaid
+flowchart TD
+    Claude["Claude (모델)\n'GitHub에 PR을 만들어줘'"]
+    MCP["MCP 서버 (github)\n- 도구 스키마 정의\n- 인증 처리 (토큰 관리)\n- API 호출 실행"]
+    GitHub["GitHub API 서버"]
+    Claude -->|"mcp__github__create_pull_request 호출"| MCP
+    MCP -->|"REST API 호출"| GitHub
 ```
 
 ### 주요 MCP 플러그인
@@ -230,30 +211,21 @@ mcp__postgres__query
 
 "이 PR의 코드를 리뷰하고 GitHub에 코멘트를 달아줘" 라는 요청을 처리하는 흐름입니다.
 
-```
-① 사용자 요청
-   "PR #42 코드 리뷰 후 GitHub에 코멘트 달아줘"
-             ↓
-② 메인 에이전트 (모델: Sonnet) 분석
-   → PR 내용 조회 필요 → GitHub MCP 사용
-   → 코드 리뷰 필요 → Skill 또는 서브 에이전트 사용
-             ↓
-③ MCP Plugin 호출
-   mcp__github__pull_request_read(pr=42)
-   → PR 변경 파일 목록, diff 수신
-             ↓
-④ 서브 에이전트 생성 (병렬)
-   [Agent: Explore] 관련 코드 컨텍스트 파악
-             ↓
-⑤ 모델 추론
-   수집한 코드 + 컨텍스트로 리뷰 의견 생성
-             ↓
-⑥ MCP Plugin 호출
-   mcp__github__add_comment_to_pending_review(...)
-   → GitHub PR에 코멘트 등록
-             ↓
-⑦ 결과 반환
-   "PR #42에 3개의 코멘트를 달았습니다."
+```mermaid
+sequenceDiagram
+    participant U as 사용자
+    participant M as 메인 에이전트
+    participant G as GitHub MCP
+    participant E as Explore Agent
+    U->>M: PR #42 코드 리뷰 후 GitHub에 코멘트 달아줘
+    M->>G: mcp__github__pull_request_read(pr=42)
+    G-->>M: PR 변경 파일 목록, diff
+    M->>E: 관련 코드 컨텍스트 파악 (병렬)
+    E-->>M: 컨텍스트 결과
+    Note over M: 코드 + 컨텍스트로 리뷰 의견 생성
+    M->>G: mcp__github__add_comment_to_pending_review(...)
+    G-->>M: 코멘트 등록 완료
+    M-->>U: PR #42에 3개의 코멘트를 달았습니다.
 ```
 
 ---
@@ -264,27 +236,24 @@ mcp__postgres__query
 
 서브 에이전트는 **독립된 컨텍스트**에서 실행됩니다. 메인 에이전트의 전체 대화 기록을 보지 못하므로, 프롬프트에 필요한 모든 정보를 명시적으로 전달해야 합니다.
 
-```
-메인 에이전트 컨텍스트 (전체 대화 기록)
-    ↓  spawn (프롬프트 전달)
-서브 에이전트 컨텍스트 (독립적, 격리됨)
-    ↓  결과 반환 (단일 메시지)
-메인 에이전트 컨텍스트 (결과 수신)
+```mermaid
+flowchart TD
+    Main1["메인 에이전트 컨텍스트\n(전체 대화 기록)"]
+    Sub["서브 에이전트 컨텍스트\n(독립적, 격리됨)"]
+    Main2["메인 에이전트 컨텍스트\n(결과 수신)"]
+    Main1 -->|"spawn (프롬프트 전달)"| Sub
+    Sub -->|"결과 반환 (단일 메시지)"| Main2
 ```
 
 ### 도구 권한 계층
 
-```
-사용자 설정 (settings.json)
-       ↓ 최우선
-프로젝트 설정 (.claude/settings.json)
-       ↓
-에이전트 타입 기본 권한
-  - Explore: 읽기 전용 (Edit/Write 불가)
-  - Plan: 읽기 전용
-  - claude: 모든 도구
-       ↓
-실행 시 사용자 승인 (interactive 모드)
+```mermaid
+flowchart TD
+    U["사용자 설정 (settings.json)\n최우선"]
+    P["프로젝트 설정 (.claude/settings.json)"]
+    A["에이전트 타입 기본 권한\nExplore: 읽기 전용 · Plan: 읽기 전용 · claude: 모든 도구"]
+    I["실행 시 사용자 승인 (interactive 모드)"]
+    U --> P --> A --> I
 ```
 
 ---
@@ -309,10 +278,12 @@ Explore("tests 코드")     # 10초
 
 대용량 파일 탐색이나 반복 검색은 서브 에이전트에게 위임해 메인 컨텍스트 창을 보호합니다.
 
-```
-메인 에이전트: "src/** 에서 deprecated API 찾아줘"
-  → [Agent: Explore] 탐색 실행 (대량 파일 읽기)
-  → 결과 요약만 반환 (메인 컨텍스트에 최소한의 정보만 추가)
+```mermaid
+flowchart LR
+    Main["메인 에이전트\n'src/** 에서 deprecated API 찾아줘'"]
+    Explore["Agent: Explore\n탐색 실행 (대량 파일 읽기)"]
+    Result["결과 요약만 반환\n(메인 컨텍스트에 최소한의 정보만 추가)"]
+    Main --> Explore --> Result
 ```
 
 ---

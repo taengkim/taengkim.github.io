@@ -15,16 +15,15 @@ tags: [airflow, celery-executor, kubernetes-executor, 운영, 인프라]
 
 스케줄러가 태스크를 **메시지 브로커**(Redis / RabbitMQ)에 넣으면, 항상 떠 있는 Celery Worker 프로세스가 꺼내 실행합니다.
 
-```
-Scheduler
-    │  태스크 enqueue
-    ▼
-[Redis / RabbitMQ]  ◀── 브로커 (필수)
-    │  태스크 dequeue
-    ▼
-Celery Worker 1 ──▶ Task A 실행
-Celery Worker 2 ──▶ Task B 실행
-Celery Worker 3 ──▶ Task C 실행
+```mermaid
+flowchart TD
+    Scheduler["Scheduler"]
+    Broker["Redis / RabbitMQ\n브로커 (필수)"]
+    W1["Celery Worker 1\nTask A 실행"]
+    W2["Celery Worker 2\nTask B 실행"]
+    W3["Celery Worker 3\nTask C 실행"]
+    Scheduler -->|"태스크 enqueue"| Broker
+    Broker -->|"태스크 dequeue"| W1 & W2 & W3
 ```
 
 - Worker는 **항상 실행 중** (유휴 상태에도 리소스 점유)
@@ -35,16 +34,15 @@ Celery Worker 3 ──▶ Task C 실행
 
 스케줄러가 직접 **Kubernetes API 서버**에 Pod 생성 요청을 보내고, 태스크가 끝나면 Pod를 삭제합니다.
 
-```
-Scheduler
-    │  Pod 생성 요청
-    ▼
-[Kubernetes API Server]
-    │  Pod 스케줄링
-    ▼
-Node A: [Task Pod] ──▶ Task A 실행 후 삭제
-Node B: [Task Pod] ──▶ Task B 실행 후 삭제
-Node C: [Task Pod] ──▶ Task C 실행 후 삭제
+```mermaid
+flowchart TD
+    Scheduler["Scheduler"]
+    K8s["Kubernetes API Server"]
+    P1["Node A\nTask Pod → Task A 실행 후 삭제"]
+    P2["Node B\nTask Pod → Task B 실행 후 삭제"]
+    P3["Node C\nTask Pod → Task C 실행 후 삭제"]
+    Scheduler -->|"Pod 생성 요청"| K8s
+    K8s -->|"Pod 스케줄링"| P1 & P2 & P3
 ```
 
 - Pod는 **태스크 기간만 존재** (유휴 비용 없음)
