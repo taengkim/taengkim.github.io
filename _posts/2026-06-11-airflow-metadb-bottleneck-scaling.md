@@ -24,9 +24,9 @@ flowchart TB
     end
     subgraph AA["Active-Active (충돌)"]
         direction LR
-        SC["Scheduler A"] -->|"FOR UPDATE\n로컬 락만"| N1[("Node 1")]
-        SD["Scheduler B"] -->|"FOR UPDATE\n로컬 락만"| N2[("Node 2")]
-        N1 -. "COMMIT 시점\ncertification 충돌" .-> N2
+        SC["Scheduler A"] -->|"FOR UPDATE<br/>로컬 락만"| N1[("Node 1")]
+        SD["Scheduler B"] -->|"FOR UPDATE<br/>로컬 락만"| N2[("Node 2")]
+        N1 -. "COMMIT 시점<br/>certification 충돌" .-> N2
     end
 ```
 
@@ -59,11 +59,11 @@ Airflow 공식 문서도 못박고 있습니다: **메타DB는 `SELECT ... FOR U
 
 ```mermaid
 flowchart TD
-    S["Scheduler(s)\nFOR UPDATE SKIP LOCKED 루프"]
-    W["Workers\nTI 상태 전이 · heartbeat"]
-    WS["Webserver\nUI 조회"]
-    T["Triggerer\ndeferred 태스크"]
-    DB[("메타DB\n단일 Primary — 쓰기 수평 확장 불가")]
+    S["Scheduler(s)<br/>FOR UPDATE SKIP LOCKED 루프"]
+    W["Workers<br/>TI 상태 전이 · heartbeat"]
+    WS["Webserver<br/>UI 조회"]
+    T["Triggerer<br/>deferred 태스크"]
+    DB[("메타DB<br/>단일 Primary — 쓰기 수평 확장 불가")]
     S --> DB
     W --> DB
     WS --> DB
@@ -161,13 +161,13 @@ Task Execution API는 커넥션을 중앙화·완충할 뿐, DB를 없애지 않
 
 ```mermaid
 flowchart TD
-    Q1{"DAG 규모가\n단일 클러스터 한계에\n근접했나?"}
+    Q1{"DAG 규모가<br/>단일 클러스터 한계에<br/>근접했나?"}
     Q2{"Airflow 3.x인가?"}
     Q3{"커넥션이 병목인가?"}
-    A1["3.x 전환 (Task Execution API)\n커넥션 압력 완화"]
-    A2["PgBouncer + heartbeat 튜닝\n+ db clean 정기화"]
-    A3["프라이머리 수직 확장\n+ 리드 레플리카로 읽기 분리"]
-    A4["셀 아키텍처로 분할\n(DB를 쪼개는 게 아니라 Airflow를 쪼갬)"]
+    A1["3.x 전환 (Task Execution API)<br/>커넥션 압력 완화"]
+    A2["PgBouncer + heartbeat 튜닝<br/>+ db clean 정기화"]
+    A3["프라이머리 수직 확장<br/>+ 리드 레플리카로 읽기 분리"]
+    A4["셀 아키텍처로 분할<br/>(DB를 쪼개는 게 아니라 Airflow를 쪼갬)"]
     Q1 -->|NO| A2
     Q1 -->|YES| Q2
     Q2 -->|NO| A1

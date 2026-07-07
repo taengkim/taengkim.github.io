@@ -15,9 +15,9 @@ Claude Code는 세션을 시작할 때 다음 순서로 `CLAUDE.md`를 탐색합
 
 ```mermaid
 flowchart TD
-    G["~/.claude/CLAUDE.md\n전역 (모든 프로젝트 공통)"]
-    P["{project-root}/CLAUDE.md\n프로젝트 루트"]
-    S["{sub-dir}/CLAUDE.md\n하위 디렉토리 (해당 디렉토리 작업 시)"]
+    G["~/.claude/CLAUDE.md<br/>전역 (모든 프로젝트 공통)"]
+    P["{project-root}/CLAUDE.md<br/>프로젝트 루트"]
+    S["{sub-dir}/CLAUDE.md<br/>하위 디렉토리 (해당 디렉토리 작업 시)"]
     G --> P --> S
 ```
 

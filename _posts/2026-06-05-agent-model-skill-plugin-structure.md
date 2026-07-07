@@ -16,9 +16,9 @@ Claude Code에서 Agent를 사용할 때 내부적으로 **모델(Model)**, **�
 flowchart TD
     User["사용자 요청 (자연어)"]
     subgraph MainAgent["메인 Agent (Claude 모델)"]
-        Skills["Skills\n/review · /research · /run"]
-        SubAgents["Sub-Agents\nExplore · Plan · general"]
-        MCP["MCP Plugins\nmcp__github__* · mcp__slack__*\nmcp__postgres__*"]
+        Skills["Skills<br/>/review · /research · /run"]
+        SubAgents["Sub-Agents<br/>Explore · Plan · general"]
+        MCP["MCP Plugins<br/>mcp__github__* · mcp__slack__*<br/>mcp__postgres__*"]
     end
     Result["결과 반환"]
     User --> MainAgent --> Result
@@ -52,9 +52,9 @@ Claude Code는 작업 성격에 따라 다른 모델을 선택할 수 있습니�
 
 ```mermaid
 flowchart LR
-    Input["입력\n사용자 요청 + 시스템 프롬프트 + 도구 스키마"]
-    Process["처리\n컨텍스트 이해 → 계획 수립 → 도구 선택 → 실행 판단"]
-    Output["출력\n텍스트 응답 또는 도구 호출 (tool_use)"]
+    Input["입력<br/>사용자 요청 + 시스템 프롬프트 + 도구 스키마"]
+    Process["처리<br/>컨텍스트 이해 → 계획 수립 → 도구 선택 → 실행 판단"]
+    Output["출력<br/>텍스트 응답 또는 도구 호출 (tool_use)"]
     Input --> Process --> Output
 ```
 
@@ -88,10 +88,10 @@ Claude Code는 `Agent` 도구로 특화된 서브 에이전트를 생성할 수 
 ```mermaid
 flowchart TD
     Main["메인 에이전트"]
-    A1["Agent: Explore\n프론트엔드 코드 탐색"]
-    A2["Agent: Explore\n백엔드 API 탐색"]
-    A3["Agent: Explore\n테스트 코드 탐색"]
-    Collect["결과 수집\n코드 분석 완료"]
+    A1["Agent: Explore<br/>프론트엔드 코드 탐색"]
+    A2["Agent: Explore<br/>백엔드 API 탐색"]
+    A3["Agent: Explore<br/>테스트 코드 탐색"]
+    Collect["결과 수집<br/>코드 분석 완료"]
     Main --> A1 & A2 & A3 --> Collect
 ```
 
@@ -99,10 +99,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Main["메인 에이전트\n'새 기능을 구현해줘'"]
-    Plan["Agent: Plan\n구현 계획 수립"]
+    Main["메인 에이전트<br/>'새 기능을 구현해줘'"]
+    Plan["Agent: Plan<br/>구현 계획 수립"]
     Review["계획 검토 후 구현 진행"]
-    Explore["Agent: Explore\n관련 파일 빠른 탐색"]
+    Explore["Agent: Explore<br/>관련 파일 빠른 탐색"]
     Main --> Plan --> Review
     Main --> Explore
 ```
@@ -172,8 +172,8 @@ mcp__postgres__query
 
 ```mermaid
 flowchart TD
-    Claude["Claude (모델)\n'GitHub에 PR을 만들어줘'"]
-    MCP["MCP 서버 (github)\n- 도구 스키마 정의\n- 인증 처리 (토큰 관리)\n- API 호출 실행"]
+    Claude["Claude (모델)<br/>'GitHub에 PR을 만들어줘'"]
+    MCP["MCP 서버 (github)<br/>- 도구 스키마 정의<br/>- 인증 처리 (토큰 관리)<br/>- API 호출 실행"]
     GitHub["GitHub API 서버"]
     Claude -->|"mcp__github__create_pull_request 호출"| MCP
     MCP -->|"REST API 호출"| GitHub
@@ -238,9 +238,9 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Main1["메인 에이전트 컨텍스트\n(전체 대화 기록)"]
-    Sub["서브 에이전트 컨텍스트\n(독립적, 격리됨)"]
-    Main2["메인 에이전트 컨텍스트\n(결과 수신)"]
+    Main1["메인 에이전트 컨텍스트<br/>(전체 대화 기록)"]
+    Sub["서브 에이전트 컨텍스트<br/>(독립적, 격리됨)"]
+    Main2["메인 에이전트 컨텍스트<br/>(결과 수신)"]
     Main1 -->|"spawn (프롬프트 전달)"| Sub
     Sub -->|"결과 반환 (단일 메시지)"| Main2
 ```
@@ -249,9 +249,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    U["사용자 설정 (settings.json)\n최우선"]
+    U["사용자 설정 (settings.json)<br/>최우선"]
     P["프로젝트 설정 (.claude/settings.json)"]
-    A["에이전트 타입 기본 권한\nExplore: 읽기 전용 · Plan: 읽기 전용 · claude: 모든 도구"]
+    A["에이전트 타입 기본 권한<br/>Explore: 읽기 전용 · Plan: 읽기 전용 · claude: 모든 도구"]
     I["실행 시 사용자 승인 (interactive 모드)"]
     U --> P --> A --> I
 ```
@@ -280,9 +280,9 @@ Explore("tests 코드")     # 10초
 
 ```mermaid
 flowchart LR
-    Main["메인 에이전트\n'src/** 에서 deprecated API 찾아줘'"]
-    Explore["Agent: Explore\n탐색 실행 (대량 파일 읽기)"]
-    Result["결과 요약만 반환\n(메인 컨텍스트에 최소한의 정보만 추가)"]
+    Main["메인 에이전트<br/>'src/** 에서 deprecated API 찾아줘'"]
+    Explore["Agent: Explore<br/>탐색 실행 (대량 파일 읽기)"]
+    Result["결과 요약만 반환<br/>(메인 컨텍스트에 최소한의 정보만 추가)"]
     Main --> Explore --> Result
 ```
 

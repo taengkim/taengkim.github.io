@@ -29,9 +29,9 @@ tags: [airflow, kubernetes, pod-operator, kubernetes-executor, 운영, 인프라
 flowchart TD
     Scheduler["Airflow Scheduler"]
     K8s["Kubernetes API Server"]
-    P1["Worker Pod\ntask_a (airflow 이미지)"]
-    P2["Worker Pod\ntask_b"]
-    P3["Worker Pod\ntask_c"]
+    P1["Worker Pod<br/>task_a (airflow 이미지)"]
+    P2["Worker Pod<br/>task_b"]
+    P3["Worker Pod<br/>task_c"]
     Scheduler -->|"Pod 생성 요청 (K8s API)"| K8s
     K8s --> P1 & P2 & P3
 ```
@@ -44,10 +44,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Worker["Airflow Worker Pod\n(airflow 이미지)"]
+    Worker["Airflow Worker Pod<br/>(airflow 이미지)"]
     K8s["Kubernetes API Server"]
-    TaskPod["Task Pod\nspark:3.5 · dbt:1.8 · java:17\n(Airflow 설치 불필요)"]
-    Worker -->|"KPO 코드 실행\nPod 생성 요청 (K8s API)"| K8s
+    TaskPod["Task Pod<br/>spark:3.5 · dbt:1.8 · java:17<br/>(Airflow 설치 불필요)"]
+    Worker -->|"KPO 코드 실행<br/>Pod 생성 요청 (K8s API)"| K8s
     K8s --> TaskPod
 ```
 
@@ -211,7 +211,7 @@ KPO 없이 이 구조만으로 경량/중량 태스크를 깔끔하게 분리할
 
 ```mermaid
 flowchart LR
-    W["Celery Worker"] --> KPO["KubernetesPodOperator"] --> Pod["K8s Task Pod\n(pure spark 이미지)"]
+    W["Celery Worker"] --> KPO["KubernetesPodOperator"] --> Pod["K8s Task Pod<br/>(pure spark 이미지)"]
 ```
 
 Airflow 자체는 Celery로 운영하면서, Airflow를 설치할 수 없는 순수 런타임 이미지만 K8s Pod로 분리할 때 유효합니다.
@@ -220,7 +220,7 @@ Airflow 자체는 Celery로 운영하면서, Airflow를 설치할 수 없는 순
 
 ```mermaid
 flowchart LR
-    S["Scheduler"] --> W["Worker Pod\n(airflow + 필요한 deps 포함 이미지)"]
+    S["Scheduler"] --> W["Worker Pod<br/>(airflow + 필요한 deps 포함 이미지)"]
 ```
 
 KPO 없이 executor_config 이미지 오버라이드로 대부분 해결합니다.
@@ -229,7 +229,7 @@ KPO 없이 executor_config 이미지 오버라이드로 대부분 해결합니�
 
 ```mermaid
 flowchart LR
-    S["Scheduler"] --> W["Worker Pod\n(airflow)"] --> KPO["KPO"] --> T["Task Pod\n(pure 이미지)"]
+    S["Scheduler"] --> W["Worker Pod<br/>(airflow)"] --> KPO["KPO"] --> T["Task Pod<br/>(pure 이미지)"]
 ```
 
 이미지에 Airflow를 설치할 수 없는 경우(케이스 1)에만 정당화됩니다. 그 외에는 Pod 2중 기동 오버헤드만 추가됩니다.
@@ -260,19 +260,19 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Q1{"KubernetesExecutor를\n이미 쓰고 있나?"}
-    Q2{"태스크 이미지에\nAirflow 포함 가능?"}
-    Q3{"다른 K8s 클러스터에\nPod 보내야 하나?"}
-    Q4{"일부 태스크만\nK8s Pod로 실행?"}
-    Q5{"모든 태스크를\nK8s Pod로 실행?"}
-    A1["executor_config 이미지 오버라이드\n(KPO 불필요)"]
-    A2["KPO 사용\n(케이스 1)"]
-    A3["KPO + kubernetes_conn_id\n(케이스 3)"]
-    A4["KPO 사용\n(케이스 2)"]
-    A5["KubernetesExecutor\n전환 고려"]
+    Q1{"KubernetesExecutor를<br/>이미 쓰고 있나?"}
+    Q2{"태스크 이미지에<br/>Airflow 포함 가능?"}
+    Q3{"다른 K8s 클러스터에<br/>Pod 보내야 하나?"}
+    Q4{"일부 태스크만<br/>K8s Pod로 실행?"}
+    Q5{"모든 태스크를<br/>K8s Pod로 실행?"}
+    A1["executor_config 이미지 오버라이드<br/>(KPO 불필요)"]
+    A2["KPO 사용<br/>(케이스 1)"]
+    A3["KPO + kubernetes_conn_id<br/>(케이스 3)"]
+    A4["KPO 사용<br/>(케이스 2)"]
+    A5["KubernetesExecutor<br/>전환 고려"]
     Q1 -->|YES| Q2
     Q1 -->|YES| Q3
-    Q1 -->|"NO\n(Celery/Local)"| Q4
+    Q1 -->|"NO<br/>(Celery/Local)"| Q4
     Q2 -->|YES| A1
     Q2 -->|NO| A2
     Q3 -->|YES| A3
