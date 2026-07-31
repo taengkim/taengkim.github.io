@@ -2,7 +2,7 @@
 title: "Claude Code 추천 플러그인 목록"
 date: 2026-05-31
 categories: [도구, Claude Code]
-tags: [claude-code, mcp, vscode, 플러그인]
+tags: [mcp, vscode, plugin]
 ---
 
 Claude Code를 더 강력하게 만들어주는 추천 플러그인 목록입니다.  

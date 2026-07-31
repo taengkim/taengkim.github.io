@@ -2,7 +2,7 @@
 title: "oh-my-claudecode — Claude Code를 32개 AI 에이전트 팀으로 바꾸는 플러그인"
 date: 2026-06-11
 categories: [Claude Code, 도구]
-tags: [claude-code, oh-my-claude, plugin, multi-agent, 오케스트레이션]
+tags: [oh-my-claude, plugin, multi-agent, 오케스트레이션]
 ---
 
 > **TL;DR** — `oh-my-claudecode`(줄여서 OMC)는 Claude Code 위에 얹는 **멀티에이전트 오케스트레이션 플러그인**입니다. 32개의 전문 에이전트와 6개의 실행 모드를 주입해, 단일 에이전트가 순차 처리하던 작업을 여러 에이전트가 병렬로 처리하게 만듭니다. 이름은 `oh-my-zsh`에서 왔지만, 실체는 설정 관리 도구가 아니라 AI 에이전트 팀 프레임워크입니다.

@@ -2,7 +2,7 @@
 title: "대규모 Airflow의 최종 병목은 메타DB다 — Active-Active가 불가능한 이유와 스케일 전략"
 date: 2026-06-11
 categories: [Airflow, 운영]
-tags: [airflow, postgresql, metadb, high-availability, 스케일링, 인프라]
+tags: [postgresql, metadb, high-availability, 스케일링, 인프라]
 ---
 
 > **TL;DR** — Airflow 스케줄러는 메타DB의 행 락(`SELECT ... FOR UPDATE`)으로 태스크를 조율합니다. 그래서 메타DB를 **Active-Active(멀티 프라이머리)로 이중화하면 락 인증 충돌로 에러**가 납니다. 쓰기를 수평 확장할 수 없다는 이 제약이 대규모 Airflow의 구조적 천장입니다. 해법은 "DB를 쪼개는 것"이 아니라 **부하를 줄이거나(3.x Task Execution API·튜닝) Airflow 자체를 쪼개는 것(셀 아키텍처)**입니다.

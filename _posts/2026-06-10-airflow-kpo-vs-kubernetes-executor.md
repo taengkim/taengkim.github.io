@@ -2,7 +2,7 @@
 title: "Airflow KubernetesPodOperator vs KubernetesExecutor — 무엇이 다르고 언제 쓰나"
 date: 2026-06-10
 categories: [Airflow, 운영]
-tags: [airflow, kubernetes, pod-operator, kubernetes-executor, 운영, 인프라]
+tags: [kubernetes, pod-operator, kubernetes-executor, 인프라]
 ---
 
 > **TL;DR** — `KubernetesExecutor`를 이미 쓰고 있다면 대부분의 경우 `KubernetesPodOperator`(KPO)는 필요하지 않습니다. `executor_config`로 이미지·리소스·GPU를 태스크별로 제어할 수 있기 때문입니다. KPO가 진짜 필요한 경우는 좁습니다: **이미지에 Airflow를 설치할 수 없거나**, **KubernetesExecutor를 쓰지 않는 환경**에서 일부 태스크만 K8s Pod로 실행해야 할 때입니다.

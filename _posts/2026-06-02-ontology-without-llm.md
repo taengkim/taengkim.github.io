@@ -2,7 +2,7 @@
 title: "온톨로지 구축 시 LLM 없이 사용할 수 있는 기법들"
 date: 2026-06-02
 categories: [AI, 온톨로지]
-tags: [ontology, nlp, knowledge-graph, 지식그래프]
+tags: [ontology, nlp, knowledge-graph]
 ---
 
 LLM이 온톨로지 구축에 강력한 도구이긴 하지만, 비용·보안·성능 제약으로 사용하지 못하는 경우가 있습니다.  
