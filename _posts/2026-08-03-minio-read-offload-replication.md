@@ -42,14 +42,28 @@ flowchart LR
 
 ### "그럼 콜드에 직접 붙으면 되잖아?" — 그것도 안 된다
 
-티어링된 콜드에는 객체가 **원래 이름이 아니라 MinIO 내부 opaque 키(UUID류)** 로 저장된다.
+티어링된 콜드에는 객체가 **원래 이름이 아니라 랜덤 UUID 기반의 불투명(opaque) 키**로 저장된다. MinIO 공식 [Lifecycle 설계 문서](https://github.com/minio/minio/blob/master/docs/bucket/lifecycle/DESIGN.md) 기준으로 하나씩 보면:
 
-- 콜드 버킷을 `mc ls`로 봐도 `logs/2026/08/app.log` 같은 **원본 경로가 없다**. 랜덤 키의 데이터 블롭만 있다.
-- 논리 이름 ↔ 콜드 키 **매핑은 핫 메타데이터에만** 존재한다.
-- 티어 암호화(SSE)를 켰다면 블롭 자체도 암호화되어 있다.
+- 콜드 버킷을 `mc ls`로 봐도 `logs/2026/08/app.log` 같은 **원본 경로가 없다**. 대신 티어 설정의 `bucket/prefix` 아래에 UUID로 파생된 블롭만 있다:
+
+  ```text
+  # 원격(콜드) 티어에 실제로 저장되는 형태 (예시)
+  WARM_TIER_BUCKET/prefix/0b/c4/0bc4fab7-2daf-4d2f-8e39-5c6c6fb7e2d3
+                          └─ UUID 앞 4글자로 디렉터리 분산 ─┘
+  ```
+
+- 원본 ↔ 콜드 블롭 **매핑은 소스(핫)의 객체 메타데이터(`xl.meta`)에만** 존재한다:
+
+  ```text
+  # 소스 객체 xl.meta 내부 필드 (base64 참조)
+  "x-minio-internal-transitioned-object": "ZDIvN2MvZDI3Y2MwYWMt...(base64)"
+  ```
+
+- 티어 암호화(SSE)를 켰다면 블롭은 **암호화된 채 그대로 복사**되어, 직접 열어도 복호화되지 않는다.
 - 핫이 클라이언트에게 콜드로 가는 **presigned URL / 리다이렉트를 넘겨주는 기능도 없다.**
+- 게다가 MinIO는 **원격 티어 데이터에 대한 배타적(exclusive) 접근**을 전제한다 — 모든 접근은 소스 MinIO의 S3 API를 통해서만 이뤄져야 한다.
 
-정리하면, **티어링의 콜드는 "MinIO가 관리하는 데이터 창고"이지 클라이언트가 붙는 엔드포인트가 아니다.**
+정리하면, **티어링의 콜드는 "MinIO가 관리하는 데이터 창고"이지 클라이언트가 붙는 엔드포인트가 아니다.** 콜드에 직접 붙으면 UUID 블롭 목록 자체는 보이지만, 원본 이름·매핑·복호화 키가 없어 **원래 객체를 의미 있게 읽을 수는 없다.**
 
 ## 정답: 단방향 Bucket Replication + 읽기 라우팅
 
