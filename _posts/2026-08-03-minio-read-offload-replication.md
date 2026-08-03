@@ -3,6 +3,7 @@ title: "MinIO 읽기 트래픽 오프로드: 티어링이 아니라 '복제'다"
 date: 2026-08-03
 categories: [인프라, MinIO]
 tags: [minio, s3, ilm, replication, tiering, observability, storage]
+mermaid: true
 ---
 
 ## TL;DR
