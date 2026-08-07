@@ -10,6 +10,10 @@ description: taeng.kim personal blog
 url: "https://taengkim.github.io"
 baseurl: ""
 
+# 글 URL을 Chirpy 표준(/posts/제목/)으로 고정. 없으면 Jekyll 기본값(/카테고리/연/월/일/제목.html)이 되어
+# 한글 카테고리가 URL 인코딩되고 /posts/ 경로가 404가 난다.
+permalink: /posts/:title/
+
 github:
   username: taengkim
 
