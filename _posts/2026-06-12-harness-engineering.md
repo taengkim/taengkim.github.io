@@ -3,6 +3,7 @@ title: "하네스 엔지니어링 — 프롬프트 다음의 AI 엔지니어링"
 date: 2026-06-12
 categories: [AI, 방법론]
 tags: [harness-engineering, agent, llm, context-engineering, claude-code]
+mermaid: true
 ---
 
 > **TL;DR** — 하네스(harness)는 LLM을 감싸서 실제로 일을 하게 만드는 **바깥 껍데기 전체**입니다. 도구(tool), 컨텍스트 주입, 루프 제어, 권한·검증, 상태 관리를 묶은 실행 환경이죠. 하네스 엔지니어링은 "프롬프트를 잘 쓰는 것"을 넘어 **모델이 안전하고 반복 가능하게 행동하도록 그 껍데기를 설계하는 일**입니다. 같은 모델도 하네스가 다르면 완전히 다른 에이전트가 됩니다.

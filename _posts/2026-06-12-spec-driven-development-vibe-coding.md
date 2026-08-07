@@ -3,6 +3,7 @@ title: "바이브 코딩을 넘어서 — 스펙 주도 개발(SDD)의 개념과
 date: 2026-06-12
 categories: [Claude Code, 방법론]
 tags: [spec-driven-development, sdd, vibe-coding, spec-kit]
+mermaid: true
 ---
 
 > **TL;DR** — 스펙 주도 개발(Spec-Driven Development, SDD)은 코드를 짜기 전에 **명세(spec)를 먼저 확정하고, 그 명세를 단일 진실 소스로 삼아 AI가 구현**하게 하는 방식입니다. 즉흥적 대화로 코드를 뽑는 "바이브 코딩"의 의도 유실·일관성 붕괴·검증 불가 문제를 해결합니다. 핵심은 **"말로 던지기"에서 "문서로 합의하고 구현하기"로** 옮기는 것입니다.

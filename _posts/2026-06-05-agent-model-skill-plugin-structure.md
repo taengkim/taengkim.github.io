@@ -3,6 +3,7 @@ title: "Claude Code Agent 사용 시 모델·스킬·플러그인 구조 이해�
 date: 2026-06-05
 categories: [Claude Code, 아키텍처]
 tags: [agent, skill, mcp, plugin]
+mermaid: true
 ---
 
 Claude Code에서 Agent를 사용할 때 내부적으로 **모델(Model)**, **스킬(Skill)**, **플러그인(Plugin/MCP)** 세 계층이 유기적으로 동작합니다.  
