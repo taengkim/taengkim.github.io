@@ -6,7 +6,11 @@ tags: [celery-executor, kubernetes-executor, 인프라]
 mermaid: true
 ---
 
-> **TL;DR** — 정답은 없습니다. **팀 인프라 성숙도**, **DAG 태스크 특성**, **의존성 격리 필요 여부** 세 가지 기준으로 결정하면 됩니다. K8s를 이미 운영 중이고 태스크별 환경이 달라야 한다면 KubernetesExecutor, 그렇지 않다면 CeleryExecutor가 낮은 복잡도로 더 빠르게 구축됩니다.
+## 세 줄 요약
+
+1. 정답은 없다 — 팀 인프라 성숙도, DAG 태스크 특성, 의존성 격리 필요 여부 세 가지로 결정한다.
+2. K8s를 이미 운영 중이고 태스크별 환경이 달라야 한다면 KubernetesExecutor.
+3. 그렇지 않다면 CeleryExecutor가 낮은 복잡도로 더 빠르게 구축된다.
 
 ---
 

@@ -6,7 +6,11 @@ mermaid: true
 tags: [context-engineering, harness, llm, prompt-caching, agent, 방법론]
 ---
 
-> **TL;DR** — 컨텍스트 엔지니어링은 [하네스](/posts/harness-engineering/)의 하위 분야로, **모델의 컨텍스트 창에 정확히 무엇을 넣을지** 설계하는 일입니다. 창은 유한하고, 길어질수록 주의(attention)가 흐려지고 비용이 오릅니다. 핵심 기법은 네 가지 — **선택(retrieval)**, **압축(compaction)**, **정리(context editing)**, **격리(sub-agent)** — 이고, 여기에 비용을 좌우하는 **프롬프트 캐싱**의 제약이 겹칩니다.
+## 세 줄 요약
+
+1. 컨텍스트 엔지니어링은 [하네스](/posts/harness-engineering/)의 하위 분야로, 모델의 컨텍스트 창에 정확히 무엇을 넣을지 설계하는 일이다.
+2. 창은 유한하고, 길어질수록 주의(attention)가 흐려지고 비용이 오른다.
+3. 핵심 기법은 선택(retrieval)·압축(compaction)·정리(context editing)·격리(sub-agent) 네 가지이고, 여기에 비용을 좌우하는 프롬프트 캐싱의 제약이 겹친다.
 
 이 글은 [하네스 엔지니어링](/posts/harness-engineering/) 시리즈의 심화편입니다. 하네스의 5개 구성 요소 중 "컨텍스트 주입"을 깊게 파고듭니다.
 

@@ -6,7 +6,11 @@ mermaid: true
 tags: [claude-code, hallucination, harness, verification, 방법론]
 ---
 
-> **TL;DR** — LLM의 할루시네이션은 **모델이 근거 없이 기억으로 답할 때** 생깁니다. Claude Code는 [하네스](/posts/harness-engineering/)이므로, "기억으로 답하기"를 "도구로 확인하고 답하기"로 바꾸면 대부분 사라집니다. 핵심은 다섯 가지 — **근거 강제**, **CLAUDE.md로 사실 주입**, **plan mode로 가정 검증**, **검증 루프**, **컨텍스트 정리**. 프롬프트 요령이 아니라 **하네스를 설계하는** 관점입니다.
+## 세 줄 요약
+
+1. LLM의 할루시네이션은 모델이 근거 없이 기억으로 답할 때 생긴다.
+2. Claude Code는 [하네스](/posts/harness-engineering/)라서, "기억으로 답하기"를 "도구로 확인하고 답하기"로 바꾸면 대부분 사라진다.
+3. 핵심은 다섯 가지 — 근거 강제, CLAUDE.md로 사실 주입, plan mode로 가정 검증, 검증 루프, 컨텍스트 정리. 프롬프트 요령이 아니라 하네스를 설계하는 관점이다.
 
 이 글은 [하네스 엔지니어링](/posts/harness-engineering/) 시리즈의 실전 활용편입니다.
 

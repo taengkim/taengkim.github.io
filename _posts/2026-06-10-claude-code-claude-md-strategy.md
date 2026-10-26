@@ -6,7 +6,11 @@ tags: [claude-md, context-engineering, prompt-engineering, 설정]
 mermaid: true
 ---
 
-> **TL;DR** — `CLAUDE.md`는 Claude Code가 프로젝트에 진입할 때 가장 먼저 읽는 파일입니다. "무엇을 할 수 있나"를 나열하는 게 아니라 **"이 프로젝트에서 Claude가 모르면 안 되는 것"**을 적는 곳입니다. 잘 쓴 `CLAUDE.md` 하나가 매 세션마다 반복하는 컨텍스트 설명을 없애줍니다.
+## 세 줄 요약
+
+1. `CLAUDE.md`는 Claude Code가 프로젝트에 진입할 때 가장 먼저 읽는 파일이다.
+2. "무엇을 할 수 있나"의 나열이 아니라 "이 프로젝트에서 Claude가 모르면 안 되는 것"을 적는 곳이다.
+3. 잘 쓴 `CLAUDE.md` 하나가 매 세션 반복하던 컨텍스트 설명을 없애준다.
 
 ---
 

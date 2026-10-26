@@ -5,7 +5,11 @@ categories: [Airflow, 운영]
 tags: [postgresql, db-clean, dag-version, maintenance, metadb]
 ---
 
-> **TL;DR** — Airflow 3.x에서 `airflow db clean`이 `task_instance_dag_version_id_fkey` 제약 위반(`ForeignKeyViolation`)으로 실패하는 건 설정 실수가 아니라 **알려진 미해결 버그**입니다. `db clean`이 FK 관계를 무시하고 테이블별 나이 기준으로만 삭제하기 때문입니다. FK를 없애는 건 해법이 아닙니다(데이터 손상·마이그레이션 붕괴를 부릅니다). 제약을 *위반*하지 말고 *존중*하는 방향 — "참조가 사라진 고아 `dag_version`만 삭제" — 으로 가면 되고, 이건 유지보수 DAG 한 개로 자동화됩니다.
+## 세 줄 요약
+
+1. Airflow 3.x에서 `airflow db clean`이 `task_instance_dag_version_id_fkey` 위반(`ForeignKeyViolation`)으로 실패하는 건 설정 실수가 아니라 알려진 미해결 버그다 — `db clean`이 FK 관계를 무시하고 테이블별 나이 기준으로만 삭제하기 때문이다.
+2. FK를 없애는 건 해법이 아니다. 데이터 손상·마이그레이션 붕괴를 부른다.
+3. 제약을 위반하지 말고 존중하는 방향 — "참조가 사라진 고아 `dag_version`만 삭제" — 으로 가면 되고, 유지보수 DAG 한 개로 자동화된다.
 
 ---
 

@@ -5,7 +5,11 @@ categories: [Airflow, 운영]
 tags: [timetable, cron, data-interval, 마이그레이션]
 ---
 
-> **TL;DR** — Airflow 3.x에서 `schedule="0 0 * * *"` 같은 맨 cron 문자열을 쓰면 `data_interval_start == data_interval_end == logical_date`가 되어 윈도우 기반 증분 추출이 깨집니다. 이건 버그가 아니라 **기본 타임테이블이 바뀐 것**입니다: 2.x는 `CronDataIntervalTimetable`, 3.x는 `CronTriggerTimetable`이 기본입니다. 되돌리려면 타임테이블을 `CronDataIntervalTimetable`로 명시하거나, `[scheduler] create_cron_data_intervals=True`로 전역 설정합니다.
+## 세 줄 요약
+
+1. Airflow 3.x에서 맨 cron 문자열(`schedule="0 0 * * *"`)을 쓰면 `data_interval_start == data_interval_end == logical_date`가 되어 윈도우 기반 증분 추출이 깨진다.
+2. 버그가 아니라 기본 타임테이블이 바뀐 것이다 — 2.x는 `CronDataIntervalTimetable`, 3.x는 `CronTriggerTimetable`.
+3. 되돌리려면 타임테이블을 `CronDataIntervalTimetable`로 명시하거나 `[scheduler] create_cron_data_intervals=True`로 전역 설정한다.
 
 ---
 
